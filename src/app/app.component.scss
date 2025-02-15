@@ -1,0 +1,21 @@
+main {
+  margin: 5px;
+}
+
+.text-editor {
+  width: 100%;
+  height: 150px;
+  padding: 12px 12px;
+  box-sizing: border-box;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  background-color: #f8f8f8;
+  font-size: 16px;
+  resize: none;
+  outline: none;
+  margin-top: 5px;
+}
+
+.text-editor:focus {
+  border: 2px solid #aaa;
+}
