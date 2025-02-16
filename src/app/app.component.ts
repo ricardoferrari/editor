@@ -35,13 +35,29 @@ export class AppComponent implements OnInit {
     this.selectionStart = adjustedCursor.cursorStart;
     this.selectionEnd = adjustedCursor.cursorEnd;
 
-    console.log('Element ::: ', this.textEditor);
-    console.log('setBold', this.selectionStart, this.selectionEnd);
     // Insert a em tag with the selected text
     const start = this.textEditor.slice(0, this.selectionStart);
     const selectedText = this.textEditor.slice(this.selectionStart, this.selectionEnd);
     const end = this.textEditor.slice(this.selectionEnd);
     this.textEditor = `${start}<${tag}>${selectedText}</${tag}>${end}`;
+    this.styledEditor.nativeElement.innerHTML = this.textEditor;
+    this.selectionStart = 0;
+    this.selectionEnd = 0;
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+  }
+  
+  setList(outtertag: string = 'ul', innertag: string = 'li') {
+    // Reposiciona para evitar quebrar tags
+    const adjustedCursor = this.adjustTextAreaSelectionCursors( this.textEditor, { cursorStart: this.selectionStart, cursorEnd: this.selectionEnd} );
+    this.selectionStart = adjustedCursor.cursorStart;
+    this.selectionEnd = adjustedCursor.cursorEnd;
+
+    // Insert a em tag with the selected text
+    const start = this.textEditor.slice(0, this.selectionStart);
+    const selectedText = this.textEditor.slice(this.selectionStart, this.selectionEnd);
+    const end = this.textEditor.slice(this.selectionEnd);
+    this.textEditor = `${start}<${outtertag}><${innertag}>${selectedText}</${innertag}></${outtertag}>${end}`;
     this.styledEditor.nativeElement.innerHTML = this.textEditor;
     this.selectionStart = 0;
     this.selectionEnd = 0;
@@ -59,6 +75,10 @@ export class AppComponent implements OnInit {
 
   setUnderline() {
     this.setTag('u');
+  }
+  
+  setOrderedList() {
+    this.setList('ol');
   }
 
   clearFormat() {
