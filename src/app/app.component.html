@@ -2,7 +2,8 @@
   <button (click)="setBold()">Negrito</button>
   <button (click)="setItalic()">Itálico</button>
   <button (click)="setUnderline()">Sublinhado</button>
-  <button (click)="cleaeFormat()">Limpar Formatação</button>
+  <button (click)="listShortcodes()">Listar Shortcodes</button>
+  <button (click)="clearFormat()">Limpar Formatação</button>
   <br/>
   <textarea #editor [(ngModel)]="textEditor" (select)="selectText($event)" class="text-editor"></textarea>
   <div contenteditable #styledEditor class="text-editor" (input)="changeTextFormatted($event)"></div>

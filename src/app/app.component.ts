@@ -29,6 +29,12 @@ export class AppComponent implements OnInit {
     if (this.selectionStart === this.selectionEnd) {
       return;
     }
+
+    // Reposiciona para evitar quebrar tags
+    const adjustedCursor = this.adjustTextAreaSelectionCursors( this.textEditor, { cursorStart: this.selectionStart, cursorEnd: this.selectionEnd} );
+    this.selectionStart = adjustedCursor.cursorStart;
+    this.selectionEnd = adjustedCursor.cursorEnd;
+
     console.log('Element ::: ', this.textEditor);
     console.log('setBold', this.selectionStart, this.selectionEnd);
     // Insert a em tag with the selected text
@@ -55,7 +61,7 @@ export class AppComponent implements OnInit {
     this.setTag('u');
   }
 
-  cleaeFormat() {
+  clearFormat() {
     this.textEditor = this.textEditor.replace(/<[^>]*>/g, '');
     this.styledEditor.nativeElement.innerHTML = this.textEditor;
   }
@@ -79,6 +85,87 @@ export class AppComponent implements OnInit {
         console.log('Formatted === ', selection.getRangeAt(i), selection.getRangeAt(i).commonAncestorContainer);
       }
     }
+  }
+
+  listShortcodes() {
+    console.log(this.adjustTextAreaSelectionCursors( this.textEditor, { cursorStart: this.selectionStart, cursorEnd: this.selectionEnd} ));
+  }
+
+  private getShortcodesInText( content: string ) {
+    let shortcodes = content.match( /\<\/{0,1}(\w)+\>/g ),
+      result = [];
+
+    if ( shortcodes ) {
+      for (let shortcodeItem of shortcodes) {
+        result.push( shortcodeItem );
+      }
+    }
+
+    return result;
+  }
+
+  private getShortCodePositionsInText(content: string) {
+    const allShortcodes = this.getShortcodesInText(content);
+
+    if ( allShortcodes.length === 0 ) {
+      return [];
+    }
+
+    const shortcodeDetailsRegexp = RegExp(`${allShortcodes.join( '|' )}`, 'g');
+
+    let shortcodesDetails: { shortcodeName: any; showAsPlainText: boolean; startIndex: any; endIndex: any; length: any; }[] = [];
+
+    let shortcodeMatch: any;
+        
+    while ( shortcodeMatch = shortcodeDetailsRegexp.exec( content ) ) {
+      console.log('Shortcode Match :::: ', shortcodeMatch);
+      /**
+       * Checa pelas tags de abertura e fechamento de shortcodes.
+       *
+       */
+      const showAsPlainText = shortcodeMatch[1] === '<';
+
+      const shortcodeInfo = {
+        shortcodeName: shortcodeMatch[2],
+        showAsPlainText: showAsPlainText,
+        startIndex: shortcodeMatch.index,
+        endIndex: shortcodeMatch.index + shortcodeMatch[0].length,
+        length: shortcodeMatch[0].length
+      };
+      console.log('Shortcode Info :::: ', shortcodeMatch, shortcodeInfo);
+      shortcodesDetails.push(shortcodeInfo);
+    }
+
+    return shortcodesDetails;
+  }
+
+  private getShortcodeWrapperInfo( content: string, cursorPosition: number ) {
+    let contentShortcodes = this.getShortCodePositionsInText( content );
+
+    for ( let element of contentShortcodes ) {
+      if ( cursorPosition >= element.startIndex && cursorPosition <= element.endIndex ) {
+        return element;
+      }
+    }
+    return null;
+  }
+
+  private adjustTextAreaSelectionCursors( content: string, cursorPositions: {cursorStart: number; cursorEnd:number} ) {
+
+    let cursorStart = cursorPositions.cursorStart;
+    let cursorEnd = cursorPositions.cursorEnd;
+      
+    // Check if the cursor is in a tag and if so, adjust it.
+    const isCursorStartInTag = this.getShortcodeWrapperInfo( content, cursorStart );
+    const isCursorEndtInTag = this.getShortcodeWrapperInfo( content, cursorEnd );
+
+    cursorStart = isCursorStartInTag ? isCursorStartInTag.startIndex : cursorStart;
+    cursorEnd = isCursorEndtInTag ? isCursorEndtInTag.endIndex : cursorEnd;
+
+    return {
+      cursorStart: cursorStart,
+      cursorEnd: cursorEnd
+    };
   }
 
 }
