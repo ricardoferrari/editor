@@ -6,6 +6,6 @@
   <button (click)="listShortcodes()">Listar Shortcodes</button>
   <button (click)="clearFormat()">Limpar Formatação</button>
   <br/>
-  <textarea #editor [(ngModel)]="textEditor" (select)="selectText($event)" class="text-editor"></textarea>
-  <div contenteditable #styledEditor class="text-editor" (input)="changeTextFormatted($event)"></div>
+  <textarea #editor (select)="selectText($event)" class="text-editor">{{ textEditor() }}</textarea>
+  <div contenteditable #styledEditor class="text-editor" (input)="changeTextFormatted($event)" (mouseup)="selectTextFormatted($event)"></div>
 </main>

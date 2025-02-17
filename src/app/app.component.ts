@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, signal, Signal, ViewChild, WritableSignal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -11,18 +11,18 @@ import { FormsModule } from '@angular/forms';
 export class AppComponent implements OnInit {
 
   @ViewChild('editor', { static: true }) editor!: ElementRef;
-  @ViewChild('styledEditor', { static: true }) styledEditor!: ElementRef;
+  @ViewChild('styledEditor', { static: true }) styledEditor!: ElementRef<HTMLDivElement>;
   text = 'editor';
 
   private selectionStart: number = 0;
   private selectionEnd: number = 0;
 
-  textEditor: any;
+  textEditor: WritableSignal<string> = signal('');
 
   constructor() {}
   ngOnInit(): void {
-    this.textEditor = this.text;
-    this.styledEditor.nativeElement.innerHTML = this.textEditor;
+    this.textEditor.set(this.text);
+    this.styledEditor.nativeElement.innerHTML = this.textEditor();
   }
 
   setTag(tag: string) {
@@ -31,34 +31,34 @@ export class AppComponent implements OnInit {
     }
 
     // Reposiciona para evitar quebrar tags
-    const adjustedCursor = this.adjustTextAreaSelectionCursors( this.textEditor, { cursorStart: this.selectionStart, cursorEnd: this.selectionEnd} );
+    const adjustedCursor = this.adjustTextAreaSelectionCursors( this.textEditor(), { cursorStart: this.selectionStart, cursorEnd: this.selectionEnd} );
     this.selectionStart = adjustedCursor.cursorStart;
     this.selectionEnd = adjustedCursor.cursorEnd;
 
     // Insert a em tag with the selected text
-    const start = this.textEditor.slice(0, this.selectionStart);
-    const selectedText = this.textEditor.slice(this.selectionStart, this.selectionEnd);
-    const end = this.textEditor.slice(this.selectionEnd);
-    this.textEditor = `${start}<${tag}>${selectedText}</${tag}>${end}`;
-    this.styledEditor.nativeElement.innerHTML = this.textEditor;
+    const start = this.textEditor().slice(0, this.selectionStart);
+    const selectedText = this.textEditor().slice(this.selectionStart, this.selectionEnd);
+    const end = this.textEditor().slice(this.selectionEnd);
+    this.textEditor.set(`${start}<${tag}>${selectedText}</${tag}>${end}`);
+    this.styledEditor.nativeElement.innerHTML = this.textEditor();
     this.selectionStart = 0;
     this.selectionEnd = 0;
     const sel = window.getSelection();
     sel?.removeAllRanges();
   }
-  
+
   setList(outtertag: string = 'ul', innertag: string = 'li') {
     // Reposiciona para evitar quebrar tags
-    const adjustedCursor = this.adjustTextAreaSelectionCursors( this.textEditor, { cursorStart: this.selectionStart, cursorEnd: this.selectionEnd} );
+    const adjustedCursor = this.adjustTextAreaSelectionCursors( this.textEditor(), { cursorStart: this.selectionStart, cursorEnd: this.selectionEnd} );
     this.selectionStart = adjustedCursor.cursorStart;
     this.selectionEnd = adjustedCursor.cursorEnd;
 
     // Insert a em tag with the selected text
-    const start = this.textEditor.slice(0, this.selectionStart);
-    const selectedText = this.textEditor.slice(this.selectionStart, this.selectionEnd);
-    const end = this.textEditor.slice(this.selectionEnd);
-    this.textEditor = `${start}<${outtertag}><${innertag}>${selectedText}</${innertag}></${outtertag}>${end}`;
-    this.styledEditor.nativeElement.innerHTML = this.textEditor;
+    const start = this.textEditor().slice(0, this.selectionStart);
+    const selectedText = this.textEditor().slice(this.selectionStart, this.selectionEnd);
+    const end = this.textEditor().slice(this.selectionEnd);
+    this.textEditor.set(`${start}<${outtertag}><${innertag}>${selectedText}</${innertag}></${outtertag}>${end}`);
+    this.styledEditor.nativeElement.innerHTML = this.textEditor();
     this.selectionStart = 0;
     this.selectionEnd = 0;
     const sel = window.getSelection();
@@ -76,14 +76,14 @@ export class AppComponent implements OnInit {
   setUnderline() {
     this.setTag('u');
   }
-  
+
   setOrderedList() {
     this.setList('ol');
   }
 
   clearFormat() {
-    this.textEditor = this.textEditor.replace(/<[^>]*>/g, '');
-    this.styledEditor.nativeElement.innerHTML = this.textEditor;
+    this.textEditor.update(value => value.replace(/<[^>]*>/g, ''));
+    this.styledEditor.nativeElement.innerHTML = this.textEditor();
   }
 
   selectText(event: Event) {
@@ -93,22 +93,25 @@ export class AppComponent implements OnInit {
   }
 
   selectTextFormatted(event: Event) {
-    this.selectionStart = this.styledEditor.nativeElement.selectionStart;
-    this.selectionEnd = this.styledEditor.nativeElement.selectionEnd;
-    console.log('Styled ::::::::::', event, this.editor.nativeElement.selectionStart, this.editor.nativeElement.selectionEnd);
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      return;
+    }
+
+    const selectionStart = sel?.anchorOffset ?? 0;
+    const selectionEnd = sel?.focusOffset ?? 0;
+    console.log('selectTextFormatted === ', sel);
+    this.selectionStart = selectionStart;
+    this.selectionEnd = selectionEnd;
   }
 
   changeTextFormatted(event: Event) {
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      for (let i = 0; i < selection.rangeCount; ++i) {
-        console.log('Formatted === ', selection.getRangeAt(i), selection.getRangeAt(i).commonAncestorContainer);
-      }
-    }
+    this.textEditor.set(this.styledEditor.nativeElement.innerHTML.replace(/&nbsp\;/g, ''));
   }
 
   listShortcodes() {
-    console.log(this.adjustTextAreaSelectionCursors( this.textEditor, { cursorStart: this.selectionStart, cursorEnd: this.selectionEnd} ));
+    console.log(this.selectTextInTextArea( this.editor.nativeElement, { start: this.selectionStart, end: this.selectionEnd } ));
+    console.log(this.adjustTextAreaSelectionCursors( this.textEditor(), { cursorStart: this.selectionStart, cursorEnd: this.selectionEnd} ));
   }
 
   private getShortcodesInText( content: string ) {
@@ -136,7 +139,7 @@ export class AppComponent implements OnInit {
     let shortcodesDetails: { shortcodeName: any; showAsPlainText: boolean; startIndex: any; endIndex: any; length: any; }[] = [];
 
     let shortcodeMatch: any;
-        
+
     while ( shortcodeMatch = shortcodeDetailsRegexp.exec( content ) ) {
       console.log('Shortcode Match :::: ', shortcodeMatch);
       /**
@@ -174,7 +177,7 @@ export class AppComponent implements OnInit {
 
     let cursorStart = cursorPositions.cursorStart;
     let cursorEnd = cursorPositions.cursorEnd;
-      
+
     // Check if the cursor is in a tag and if so, adjust it.
     const isCursorStartInTag = this.getShortcodeWrapperInfo( content, cursorStart );
     const isCursorEndtInTag = this.getShortcodeWrapperInfo( content, cursorEnd );
@@ -186,6 +189,19 @@ export class AppComponent implements OnInit {
       cursorStart: cursorStart,
       cursorEnd: cursorEnd
     };
+  }
+
+  private selectTextInTextArea( textArea: HTMLTextAreaElement, selection: { start: number; end: number; } ) {
+    // Only valid in the text area mode and if we have selection.
+    if ( ! selection ) {
+      return;
+    }
+
+    const start = selection.start;
+    const end = selection.end || selection.start;
+
+    textArea.setSelectionRange( start, end );
+    console.log('selectTextInTextArea', start, end);
   }
 
 }
